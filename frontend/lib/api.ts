@@ -1,6 +1,27 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+function getClientId(): string | null {
+  if (typeof window === 'undefined') return null
+  const key = 'geoscope_client_id'
+  const existing = window.localStorage.getItem(key)
+  if (existing) return existing
+  const created =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `cid_${Math.random().toString(16).slice(2)}_${Date.now()}`
+  window.localStorage.setItem(key, created)
+  return created
+}
+
+function headersWithClientId(extra?: HeadersInit): HeadersInit {
+  const cid = getClientId()
+  return {
+    ...(extra || {}),
+    ...(cid ? { 'X-Client-Id': cid } : {}),
+  }
+}
+
 export type AISuggestion = {
   priority: number
   issue: string
@@ -56,7 +77,7 @@ async function asJson<T>(res: Response): Promise<T> {
 export async function analyzeUrl(url: string): Promise<{ id: number }> {
   const res = await fetch(`${API_BASE}/api/analyze`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: headersWithClientId({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ url }),
   })
   return asJson<{ id: number }>(res)
@@ -65,11 +86,15 @@ export async function analyzeUrl(url: string): Promise<{ id: number }> {
 export async function getAnalysis(id: string): Promise<AnalysisResponse> {
   const res = await fetch(`${API_BASE}/api/analysis/${id}`, {
     cache: 'no-store',
+    headers: headersWithClientId(),
   })
   return asJson<AnalysisResponse>(res)
 }
 
 export async function getHistory(): Promise<HistoryItem[]> {
-  const res = await fetch(`${API_BASE}/api/history`, { cache: 'no-store' })
+  const res = await fetch(`${API_BASE}/api/history`, {
+    cache: 'no-store',
+    headers: headersWithClientId(),
+  })
   return asJson<HistoryItem[]>(res)
 }

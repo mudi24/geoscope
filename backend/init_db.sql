@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS analyses (
     url TEXT NOT NULL,
     title TEXT,
     domain TEXT,
+    client_id TEXT,
     content_length INTEGER,
 
     -- 任务状态（迭代 2：异步任务）
@@ -45,4 +46,5 @@ CREATE TABLE IF NOT EXISTS ai_cache (
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_analyses_url ON analyses(url);
 CREATE INDEX IF NOT EXISTS idx_analyses_created ON analyses(created_at);
+CREATE INDEX IF NOT EXISTS idx_analyses_client_created ON analyses(client_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_ai_cache_created ON ai_cache(created_at);

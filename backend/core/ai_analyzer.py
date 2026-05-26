@@ -91,7 +91,13 @@ def _extract_json(text: str) -> Dict[str, Any]:
     raise ValueError("AI response is not valid JSON")
 
 
-async def analyze_with_cache(conn, url: str, content: str) -> Tuple[Dict[str, Any], bool]:
+async def analyze_with_cache(
+    conn,
+    url: str,
+    content: str,
+    *,
+    allow_external: bool = True,
+) -> Tuple[Dict[str, Any], bool, bool]:
     fp = fingerprint_content(content)
     cur = await conn.execute(
         """
@@ -105,7 +111,7 @@ async def analyze_with_cache(conn, url: str, content: str) -> Tuple[Dict[str, An
     row = await cur.fetchone()
     if row and row["result_json"]:
         try:
-            return _normalize_result(json.loads(row["result_json"])), True
+            return _normalize_result(json.loads(row["result_json"])), True, False
         except Exception:
             pass
 
@@ -114,10 +120,11 @@ async def analyze_with_cache(conn, url: str, content: str) -> Tuple[Dict[str, An
     base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/")
     model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
-    if not api_key:
+    external_called = False
+    if not api_key or not allow_external:
         result = _normalize_result(
             {
-                "summary": "（未配置 DEEPSEEK_API_KEY，已返回本地占位分析）",
+                "summary": "（AI 未调用：未配置 Key 或已触发调用配额/限流，返回本地占位分析）",
                 "gaps": [
                     "未调用 AI：无法指出具体段落的知识缺口。",
                     "可补充作者/发布日期/引用链接以提升可引用性。",
@@ -140,18 +147,20 @@ async def analyze_with_cache(conn, url: str, content: str) -> Tuple[Dict[str, An
             data = resp.json()
         content_text = data["choices"][0]["message"]["content"]
         result = _normalize_result(_extract_json(content_text))
+        external_called = True
 
-    await conn.execute(
-        """
-        INSERT INTO ai_cache (fingerprint, url, result_json)
-        VALUES (?, ?, ?)
-        ON CONFLICT(fingerprint) DO UPDATE SET
-          url=excluded.url,
-          result_json=excluded.result_json,
-          created_at=CURRENT_TIMESTAMP
-        """,
-        (fp, url, json.dumps(result, ensure_ascii=False)),
-    )
-    await conn.commit()
-    return result, False
+    if external_called:
+        await conn.execute(
+            """
+            INSERT INTO ai_cache (fingerprint, url, result_json)
+            VALUES (?, ?, ?)
+            ON CONFLICT(fingerprint) DO UPDATE SET
+              url=excluded.url,
+              result_json=excluded.result_json,
+              created_at=CURRENT_TIMESTAMP
+            """,
+            (fp, url, json.dumps(result, ensure_ascii=False)),
+        )
+        await conn.commit()
 
+    return result, False, external_called

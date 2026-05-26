@@ -28,12 +28,15 @@ async def init_db(db_path: pathlib.Path) -> None:
             conn,
             "analyses",
             {
+                "client_id": "TEXT",
                 "status": "TEXT DEFAULT 'done'",
                 "error": "TEXT",
                 "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 "score_evidence": "TEXT",
             },
         )
+        # Backfill for older DBs before client isolation existed
+        await conn.execute("UPDATE analyses SET client_id='public' WHERE client_id IS NULL")
         await conn.commit()
 
 
