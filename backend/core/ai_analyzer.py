@@ -122,9 +122,13 @@ async def analyze_with_cache(
 
     external_called = False
     if not api_key or not allow_external:
+        if not api_key:
+            summary = "（AI 未调用：未配置 DEEPSEEK_API_KEY，返回本地占位分析）"
+        else:
+            summary = "（AI 未调用：已触发调用配额/限流，返回本地占位分析）"
         result = _normalize_result(
             {
-                "summary": "（AI 未调用：未配置 Key 或已触发调用配额/限流，返回本地占位分析）",
+                "summary": summary,
                 "gaps": [
                     "未调用 AI：无法指出具体段落的知识缺口。",
                     "可补充作者/发布日期/引用链接以提升可引用性。",

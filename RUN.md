@@ -62,6 +62,13 @@ python -m playwright install chromium
 
 ## 4. 环境变量（可选）
 
+建议用配置文件（不会被提交到 git）：
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
+```
+
 ### 4.1 DeepSeek（启用 AI 分析）
 
 ```bash
@@ -91,6 +98,13 @@ curl -s http://localhost:8000/api/health
 curl -s http://localhost:8000/api/stats -H 'X-Client-Id: demo'
 curl -s http://localhost:8000/api/history -H 'X-Client-Id: demo'
 curl -s http://localhost:8000/api/analysis/1 -H 'X-Client-Id: demo'
+```
+
+查看后端是否读到了 DeepSeek 配置（不会泄露 key，仅显示是否已设置）：
+
+```bash
+export GEOSCOPE_ENABLE_DEBUG=true
+curl -s http://localhost:8000/api/debug/config
 ```
 
 提交分析：

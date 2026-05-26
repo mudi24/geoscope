@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import pathlib
 import time
 import uuid
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 from core.ai_analyzer import analyze_with_cache, fingerprint_content
 from core.db import connect, get_db_path, init_db
@@ -21,6 +23,10 @@ from core.rate_limit import RateLimiter
 from core.url_safety import UrlSafetyError, validate_public_url
 from models.schemas import AnalysisResponse, HistoryItem
 from models.schemas import AnalyzeRequest
+
+
+_BACKEND_ROOT = pathlib.Path(__file__).resolve().parent
+load_dotenv(_BACKEND_ROOT / ".env")
 
 
 @asynccontextmanager
@@ -247,6 +253,30 @@ async def stats(request: Request) -> dict:
         "db": {"analyses": total, "ai_cache": cache_total},
         "runtime": metrics,
         "ai_budget": {"date": day_key, "used": used, "limit": max_daily, "remaining": max(0, max_daily - used)},
+    }
+
+
+@app.get("/api/debug/config")
+async def debug_config() -> dict:
+    if os.getenv("GEOSCOPE_ENABLE_DEBUG", "").lower() not in {"1", "true", "yes"}:
+        raise HTTPException(status_code=404, detail="not found")
+
+    return {
+        "deepseek": {
+            "api_key_set": bool(os.getenv("DEEPSEEK_API_KEY", "").strip()),
+            "base_url": os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/"),
+            "model": os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+        },
+        "limits": {
+            "analyze_per_minute": int(os.getenv("GEOSCOPE_ANALYZE_PER_MINUTE", "20")),
+            "ai_calls_per_day": int(os.getenv("GEOSCOPE_AI_CALLS_PER_DAY", "30")),
+            "max_concurrent_analyze": int(os.getenv("GEOSCOPE_MAX_CONCURRENT_ANALYZE", "2")),
+            "max_concurrent_playwright": int(os.getenv("GEOSCOPE_MAX_CONCURRENT_PLAYWRIGHT", "1")),
+        },
+        "isolation": {
+            "require_client_id": os.getenv("GEOSCOPE_REQUIRE_CLIENT_ID", "true"),
+            "default_client_id": os.getenv("GEOSCOPE_DEFAULT_CLIENT_ID", "public"),
+        },
     }
 
 
