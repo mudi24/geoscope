@@ -1,0 +1,17 @@
+# Root
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+**/.env
+
+# Backend
+backend/data/*.db
+backend/data/*.db-journal
+
+# Frontend
+frontend/dist/
+frontend/.next/
+frontend/node_modules/
+
+*.log
