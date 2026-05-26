@@ -17,19 +17,32 @@ export default function AnalyzePage() {
 
   useEffect(() => {
     let mounted = true
-    setData(null)
-    setError(null)
-    getAnalysis(params.id)
-      .then((d) => {
+    let timer: number | null = null
+
+    async function tick() {
+      try {
+        const d = await getAnalysis(params.id)
         if (!mounted) return
         setData(d)
-      })
-      .catch((e) => {
+        if (d.status === 'error') {
+          setError(d.error || '分析失败，请重试')
+          return
+        }
+        if (d.status !== 'done') {
+          timer = window.setTimeout(tick, 1000)
+        }
+      } catch (e) {
         if (!mounted) return
         setError(e instanceof Error ? e.message : '分析失败，请重试')
-      })
+      }
+    }
+
+    setData(null)
+    setError(null)
+    tick()
     return () => {
       mounted = false
+      if (timer) window.clearTimeout(timer)
     }
   }, [params.id])
 
@@ -69,11 +82,14 @@ export default function AnalyzePage() {
     )
   }
 
-  if (!data) {
+  if (!data || data.status !== 'done') {
     return (
       <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
-        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-          加载中...
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm">
+          <div className="font-medium text-slate-900">任务处理中</div>
+          <div className="mt-2 text-slate-600">
+            当前状态：{data?.status || 'loading'}（页面会自动刷新结果）
+          </div>
         </div>
       </main>
     )
@@ -136,6 +152,17 @@ export default function AnalyzePage() {
         <SuggestionList items={data.ai_result.suggestions} />
       </div>
 
+      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
+        <details>
+          <summary className="cursor-pointer select-none font-medium text-slate-900">
+            查看评分证据（命中信号）
+          </summary>
+          <pre className="mt-3 overflow-auto rounded-lg bg-slate-50 p-3 text-xs text-slate-800">
+            {JSON.stringify(data.score_evidence || {}, null, 2)}
+          </pre>
+        </details>
+      </div>
+
       <div className="mt-6 flex flex-wrap gap-2">
         <Link
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
@@ -153,4 +180,3 @@ export default function AnalyzePage() {
     </main>
   )
 }
-

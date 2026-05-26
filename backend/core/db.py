@@ -24,7 +24,27 @@ async def init_db(db_path: pathlib.Path) -> None:
 
     async with aiosqlite.connect(db_path.as_posix()) as conn:
         await conn.executescript(schema_sql)
+        await _ensure_columns(
+            conn,
+            "analyses",
+            {
+                "status": "TEXT DEFAULT 'done'",
+                "error": "TEXT",
+                "updated_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "score_evidence": "TEXT",
+            },
+        )
         await conn.commit()
+
+
+async def _ensure_columns(conn: aiosqlite.Connection, table: str, columns: dict[str, str]) -> None:
+    cur = await conn.execute(f"PRAGMA table_info({table})")
+    rows = await cur.fetchall()
+    existing = {r[1] for r in rows}
+    for name, ddl in columns.items():
+        if name in existing:
+            continue
+        await conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
 
 async def connect(db_path: Optional[pathlib.Path] = None) -> aiosqlite.Connection:
@@ -32,4 +52,3 @@ async def connect(db_path: Optional[pathlib.Path] = None) -> aiosqlite.Connectio
     conn = await aiosqlite.connect(path)
     conn.row_factory = aiosqlite.Row
     return conn
-

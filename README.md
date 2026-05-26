@@ -2,6 +2,8 @@
 **版本**：零服务器纯本地 MVP  
 **目标**：面试演示可用的 GEO 分析平台
 
+> 已按本文档落地实现基础版本；面试演示推荐按 `ITERATIONS.md` 的 3 个迭代顺序讲解与展示。
+
 ---
 
 ## 一、技术架构总览
@@ -483,17 +485,14 @@ mkdir -p geoscope/backend && cd geoscope/backend
 
 ## 八、关键配置片段
 
-### 8.1 Next.js 静态导出配置
+### 8.1 Next.js 配置（当前实现）
 
 ```javascript
 // frontend/next.config.js
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  distDir: 'dist',
-  assetPrefix: '.',
   images: {
-    unoptimized: true,  // 静态导出必须
+    unoptimized: true,
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -501,6 +500,8 @@ const nextConfig = {
 }
 module.exports = nextConfig
 ```
+
+> 说明：`/analyze/[id]` 属于动态路由，和 `output: 'export'` 的纯静态导出模式不兼容（需要预生成所有 `id`）。当前实现使用常规 Next.js 构建方式，更适合演示“提交任务→轮询结果”的真实产品链路。
 
 ### 8.2 一键启动脚本
 

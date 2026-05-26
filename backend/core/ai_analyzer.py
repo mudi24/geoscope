@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import httpx
 
@@ -91,7 +91,7 @@ def _extract_json(text: str) -> Dict[str, Any]:
     raise ValueError("AI response is not valid JSON")
 
 
-async def analyze_with_cache(conn, url: str, content: str) -> Dict[str, Any]:
+async def analyze_with_cache(conn, url: str, content: str) -> Tuple[Dict[str, Any], bool]:
     fp = fingerprint_content(content)
     cur = await conn.execute(
         """
@@ -105,7 +105,7 @@ async def analyze_with_cache(conn, url: str, content: str) -> Dict[str, Any]:
     row = await cur.fetchone()
     if row and row["result_json"]:
         try:
-            return _normalize_result(json.loads(row["result_json"]))
+            return _normalize_result(json.loads(row["result_json"])), True
         except Exception:
             pass
 
@@ -153,5 +153,5 @@ async def analyze_with_cache(conn, url: str, content: str) -> Dict[str, Any]:
         (fp, url, json.dumps(result, ensure_ascii=False)),
     )
     await conn.commit()
-    return result
+    return result, False
 

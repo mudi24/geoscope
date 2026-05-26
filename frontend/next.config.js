@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  distDir: 'dist',
-  assetPrefix: '.',
   images: { unoptimized: true },
   env: {
     NEXT_PUBLIC_API_URL:
@@ -11,4 +8,3 @@ const nextConfig = {
 }
 
 module.exports = nextConfig
-

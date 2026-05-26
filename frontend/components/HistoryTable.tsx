@@ -15,6 +15,7 @@ export function HistoryTable({ items }: { items: HistoryItem[] }) {
           <tr>
             <th className="px-4 py-3 font-medium">时间</th>
             <th className="px-4 py-3 font-medium">标题</th>
+            <th className="px-4 py-3 font-medium">状态</th>
             <th className="px-4 py-3 font-medium">总分</th>
             <th className="px-4 py-3 font-medium">操作</th>
           </tr>
@@ -26,6 +27,7 @@ export function HistoryTable({ items }: { items: HistoryItem[] }) {
                 {new Date(it.created_at).toLocaleString()}
               </td>
               <td className="px-4 py-3 text-slate-900">{it.title || it.url}</td>
+              <td className="px-4 py-3 text-slate-700">{it.status}</td>
               <td className={`px-4 py-3 font-semibold ${scoreColor(it.total_score)}`}>
                 {it.total_score}
               </td>
@@ -44,4 +46,3 @@ export function HistoryTable({ items }: { items: HistoryItem[] }) {
     </div>
   )
 }
-

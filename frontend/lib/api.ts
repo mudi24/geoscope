@@ -27,7 +27,10 @@ export type AnalysisResponse = {
   url: string
   title?: string | null
   domain?: string | null
+  status: 'queued' | 'running' | 'done' | 'error' | string
+  error?: string | null
   scores: GeoScores
+  score_evidence?: Record<string, unknown> | null
   ai_result: AIResult
   fetch_method: string
   created_at: string
@@ -37,6 +40,7 @@ export type HistoryItem = {
   id: number
   url: string
   title?: string | null
+  status: 'queued' | 'running' | 'done' | 'error' | string
   total_score: number
   created_at: string
 }
@@ -69,4 +73,3 @@ export async function getHistory(): Promise<HistoryItem[]> {
   const res = await fetch(`${API_BASE}/api/history`, { cache: 'no-store' })
   return asJson<HistoryItem[]>(res)
 }
-

@@ -36,7 +36,10 @@ class AnalysisResponse(BaseModel):
     url: str
     title: Optional[str]
     domain: Optional[str]
+    status: str
+    error: Optional[str] = None
     scores: GeoScores
+    score_evidence: Optional[dict] = None
     ai_result: AIResult
     fetch_method: str
     created_at: datetime
@@ -46,6 +49,6 @@ class HistoryItem(BaseModel):
     id: int
     url: str
     title: Optional[str]
+    status: str
     total_score: int
     created_at: datetime
-

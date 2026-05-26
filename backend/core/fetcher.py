@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import os
 import re
 from dataclasses import dataclass
 from typing import Optional
@@ -59,16 +61,45 @@ async def _fetch_httpx(url: str) -> FetchResult:
 async def _fetch_playwright(url: str) -> FetchResult:
     from playwright.async_api import async_playwright
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
-        try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-            html = await page.content()
-        finally:
-            await context.close()
-            await browser.close()
+    max_pw = int(os.getenv("GEOSCOPE_MAX_CONCURRENT_PLAYWRIGHT", "1"))
+    if not hasattr(_fetch_playwright, "_sem"):
+        _fetch_playwright._sem = asyncio.Semaphore(max_pw)  # type: ignore[attr-defined]
+
+    async with _fetch_playwright._sem:  # type: ignore[attr-defined]
+        async with async_playwright() as p:
+            try:
+                browser = await p.chromium.launch(headless=True)
+            except Exception as e:
+                msg = str(e)
+                if "Executable doesn't exist" in msg or "playwright install" in msg:
+                    raise RuntimeError(
+                        "Playwright 浏览器未安装。请在 backend 虚拟环境中运行："
+                        " `python -m playwright install chromium`"
+                    ) from e
+                raise
+            context = await browser.new_context(
+                user_agent="GEOScope/0.1 Playwright",
+            )
+            page = await context.new_page()
+            try:
+                async def route_handler(route):
+                    if route.request.resource_type in {"image", "media", "font"}:
+                        await route.abort()
+                    else:
+                        await route.continue_()
+
+                await page.route("**/*", route_handler)
+                page.set_default_navigation_timeout(30000)
+                await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                try:
+                    await page.wait_for_load_state("networkidle", timeout=8000)
+                except Exception:
+                    pass
+                html = await page.content()
+            finally:
+                await page.close()
+                await context.close()
+                await browser.close()
 
     title, content = _extract_with_readability(html)
     return FetchResult(
@@ -87,17 +118,21 @@ async def fetch_url(url: str) -> FetchResult:
     - L2: playwright headless（当 L1 失败或内容 < 500）
     - L3: 抛出异常
     """
+    httpx_result: Optional[FetchResult] = None
     try:
-        result = await _fetch_httpx(url)
-        if result.length >= 500:
-            return _truncate(result)
+        httpx_result = await _fetch_httpx(url)
+        if httpx_result.length >= 500:
+            return _truncate(httpx_result)
     except Exception:
-        result = None
+        httpx_result = None
 
     try:
-        result = await _fetch_playwright(url)
-        return _truncate(result)
+        pw_result = await _fetch_playwright(url)
+        return _truncate(pw_result)
     except Exception as e:
+        if httpx_result is not None:
+            # Playwright 失败时，退回 httpx 结果（即使偏短，也保证流程可演示/可用）
+            return _truncate(httpx_result)
         raise RuntimeError(f"fetch failed: {e}") from e
 
 
@@ -112,4 +147,3 @@ def _truncate(result: FetchResult, max_chars: int = 8000) -> FetchResult:
         length=len(truncated),
         raw_html=result.raw_html,
     )
-
