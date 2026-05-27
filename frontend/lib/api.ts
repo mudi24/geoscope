@@ -43,6 +43,13 @@ export type GeoScores = {
   total_score: number
 }
 
+export type DimensionInsight = {
+  score: number
+  pros: string[]
+  cons: string[]
+  suggestions: string[]
+}
+
 export type AnalysisResponse = {
   id: number
   url: string
@@ -52,6 +59,7 @@ export type AnalysisResponse = {
   error?: string | null
   scores: GeoScores
   score_evidence?: Record<string, unknown> | null
+  score_insights?: Record<string, DimensionInsight> | null
   ai_result: AIResult
   fetch_method: string
   created_at: string

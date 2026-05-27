@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from core.ai_analyzer import analyze_with_cache, fingerprint_content
 from core.db import connect, get_db_path, init_db
 from core.fetcher import fetch_url
-from core.geo_scorer import score as score_geo
+from core.geo_scorer import build_insights, score as score_geo
 from core.heartbeat import start_heartbeat
 from core.rate_limit import RateLimiter
 from core.url_safety import UrlSafetyError, validate_public_url
@@ -347,6 +347,25 @@ async def get_analysis(analysis_id: int, request: Request) -> AnalysisResponse:
     except Exception:
         score_evidence = None
 
+    score_insights = None
+    if score_evidence is not None:
+        # 用 DB 里的分数 + 证据组装 GeoScoreResult，再生成 insights
+        try:
+            from core.geo_scorer import GeoScoreResult
+
+            geo2 = GeoScoreResult(
+                semantic_clarity=row["semantic_clarity"] or 0,
+                entity_completeness=row["entity_completeness"] or 0,
+                citation_credibility=row["citation_credibility"] or 0,
+                qa_friendly=row["qa_friendly"] or 0,
+                tech_markup=row["tech_markup"] or 0,
+                total_score=row["total_score"] or 0,
+                evidence=score_evidence or {},
+            )
+            score_insights = build_insights(geo2)
+        except Exception:
+            score_insights = None
+
     return AnalysisResponse(
         id=row["id"],
         url=row["url"],
@@ -363,6 +382,7 @@ async def get_analysis(analysis_id: int, request: Request) -> AnalysisResponse:
             "total_score": row["total_score"] or 0,
         },
         score_evidence=score_evidence,
+        score_insights=score_insights,
         ai_result={
             "summary": row["ai_summary"] or "",
             "gaps": gaps,

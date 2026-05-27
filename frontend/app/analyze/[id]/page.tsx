@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { AIReport } from '@/components/AIReport'
 import { ScoreCard } from '@/components/ScoreCard'
+import { ScoreEvidence } from '@/components/ScoreEvidence'
 import { ScoreRadar } from '@/components/ScoreRadar'
 import { SuggestionList } from '@/components/SuggestionList'
 import { getAnalysis, type AnalysisResponse } from '@/lib/api'
@@ -55,6 +56,17 @@ export default function AnalyzePage() {
       { name: '问答友好', score: data.scores.qa_friendly },
       { name: '技术标记', score: data.scores.tech_markup },
     ]
+  }, [data])
+
+  const insight = useMemo(() => {
+    const m = data?.score_insights || {}
+    return {
+      semantic: m['semantic_clarity'],
+      entity: m['entity_completeness'],
+      citation: m['citation_credibility'],
+      qa: m['qa_friendly'],
+      tech: m['tech_markup'],
+    }
   }, [data])
 
   if (error) {
@@ -120,11 +132,15 @@ export default function AnalyzePage() {
             title="语义清晰度"
             score={data.scores.semantic_clarity}
             desc="标题层级/段落长度/小标题密度等结构信号"
+            pros={insight.semantic?.pros}
+            cons={insight.semantic?.cons}
           />
           <ScoreCard
             title="实体完整性"
             score={data.scores.entity_completeness}
             desc="关键术语是否给出上下文解释、缩写是否展开"
+            pros={insight.entity?.pros}
+            cons={insight.entity?.cons}
           />
         </div>
       </div>
@@ -134,16 +150,22 @@ export default function AnalyzePage() {
           title="引用可信度"
           score={data.scores.citation_credibility}
           desc="作者/日期/外链等可追溯性信号"
+          pros={insight.citation?.pros}
+          cons={insight.citation?.cons}
         />
         <ScoreCard
           title="问答友好度"
           score={data.scores.qa_friendly}
           desc="是否具备 FAQ/Q&A、结论前置、直接答案句式"
+          pros={insight.qa?.pros}
+          cons={insight.qa?.cons}
         />
         <ScoreCard
           title="技术标记"
           score={data.scores.tech_markup}
           desc="Schema.org/OG/Canonical 等结构化标记"
+          pros={insight.tech?.pros}
+          cons={insight.tech?.cons}
         />
       </div>
 
@@ -152,15 +174,8 @@ export default function AnalyzePage() {
         <SuggestionList items={data.ai_result.suggestions} />
       </div>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
-        <details>
-          <summary className="cursor-pointer select-none font-medium text-slate-900">
-            查看评分证据（命中信号）
-          </summary>
-          <pre className="mt-3 overflow-auto rounded-lg bg-slate-50 p-3 text-xs text-slate-800">
-            {JSON.stringify(data.score_evidence || {}, null, 2)}
-          </pre>
-        </details>
+      <div className="mt-6">
+        <ScoreEvidence evidence={data.score_evidence || {}} />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">

@@ -19,6 +19,13 @@ class GeoScores(BaseModel):
     total_score: int
 
 
+class DimensionInsight(BaseModel):
+    score: int
+    pros: List[str]
+    cons: List[str]
+    suggestions: List[str]
+
+
 class AISuggestion(BaseModel):
     priority: int
     issue: str
@@ -40,6 +47,7 @@ class AnalysisResponse(BaseModel):
     error: Optional[str] = None
     scores: GeoScores
     score_evidence: Optional[dict] = None
+    score_insights: Optional[dict[str, DimensionInsight]] = None
     ai_result: AIResult
     fetch_method: str
     created_at: datetime
