@@ -8,7 +8,7 @@ import time
 import uuid
 from urllib.parse import urlparse
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -125,6 +125,27 @@ def _get_client_id(request: Request) -> str:
     if require:
         raise HTTPException(status_code=400, detail="missing X-Client-Id header")
     return os.getenv("GEOSCOPE_DEFAULT_CLIENT_ID", "public")
+
+
+def _parse_db_datetime(value) -> datetime:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if not isinstance(value, str):
+        return datetime.now(timezone.utc)
+
+    s = value.strip()
+    # SQLite CURRENT_TIMESTAMP: "YYYY-MM-DD HH:MM:SS" (UTC, no tz)
+    try:
+        if "T" in s:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if "." in s:
+            # "YYYY-MM-DD HH:MM:SS.SSS"
+            dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S.%f")
+        else:
+            dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+        return dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return datetime.now(timezone.utc)
 
 
 async def _process_analysis(app: FastAPI, analysis_id: int, url: str, client_id: str) -> None:
@@ -302,9 +323,7 @@ async def history(request: Request) -> list[HistoryItem]:
 
     items: list[HistoryItem] = []
     for row in rows:
-        created_at = row["created_at"]
-        if isinstance(created_at, str):
-            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        created_at = _parse_db_datetime(row["created_at"])
         items.append(
             HistoryItem(
                 id=row["id"],
@@ -334,9 +353,7 @@ async def get_analysis(analysis_id: int, request: Request) -> AnalysisResponse:
     if row is None:
         raise HTTPException(status_code=404, detail="analysis not found")
 
-    created_at = row["created_at"]
-    if isinstance(created_at, str):
-        created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    created_at = _parse_db_datetime(row["created_at"])
 
     gaps = json.loads(row["ai_gaps"] or "[]")
     suggestions = json.loads(row["ai_suggestions"] or "[]")
