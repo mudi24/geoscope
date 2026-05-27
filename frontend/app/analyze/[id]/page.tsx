@@ -120,13 +120,33 @@ export default function AnalyzePage() {
               {data.fetch_method}
             </p>
           </div>
-          <div className="text-4xl font-bold text-slate-900">{data.scores.total_score}</div>
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+              ID {data.id}
+            </div>
+            <div className="text-4xl font-bold text-slate-900">{data.scores.total_score}</div>
+          </div>
         </div>
-        <p className="mt-3 break-all text-sm text-slate-600">{data.url}</p>
+        <div className="mt-3 break-all text-sm text-slate-600">
+          <span className="text-slate-500">URL：</span>
+          <a
+            className="text-indigo-600 hover:text-indigo-700"
+            href={data.url}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {data.url}
+          </a>
+        </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ScoreRadar data={radarData} />
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">五维评分</h2>
+        <div className="text-xs text-slate-500">点击卡片可展开优缺点与建议</div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <ScoreRadar data={radarData} totalScore={data.scores.total_score} />
         <div className="grid grid-cols-1 gap-4">
           <ScoreCard
             title="语义清晰度"
@@ -134,6 +154,7 @@ export default function AnalyzePage() {
             desc="标题层级/段落长度/小标题密度等结构信号"
             pros={insight.semantic?.pros}
             cons={insight.semantic?.cons}
+            suggestions={insight.semantic?.suggestions}
           />
           <ScoreCard
             title="实体完整性"
@@ -141,6 +162,7 @@ export default function AnalyzePage() {
             desc="关键术语是否给出上下文解释、缩写是否展开"
             pros={insight.entity?.pros}
             cons={insight.entity?.cons}
+            suggestions={insight.entity?.suggestions}
           />
         </div>
       </div>
@@ -152,6 +174,7 @@ export default function AnalyzePage() {
           desc="作者/日期/外链等可追溯性信号"
           pros={insight.citation?.pros}
           cons={insight.citation?.cons}
+          suggestions={insight.citation?.suggestions}
         />
         <ScoreCard
           title="问答友好度"
@@ -159,6 +182,7 @@ export default function AnalyzePage() {
           desc="是否具备 FAQ/Q&A、结论前置、直接答案句式"
           pros={insight.qa?.pros}
           cons={insight.qa?.cons}
+          suggestions={insight.qa?.suggestions}
         />
         <ScoreCard
           title="技术标记"
@@ -166,15 +190,26 @@ export default function AnalyzePage() {
           desc="Schema.org/OG/Canonical 等结构化标记"
           pros={insight.tech?.pros}
           cons={insight.tech?.cons}
+          suggestions={insight.tech?.suggestions}
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">AI 洞察</h2>
+        <div className="text-xs text-slate-500">摘要 / 缺口 / 优化建议</div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
         <AIReport summary={data.ai_result.summary} gaps={data.ai_result.gaps} />
         <SuggestionList items={data.ai_result.suggestions} />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">评分证据</h2>
+        <div className="text-xs text-slate-500">用于解释“为何得分如此”</div>
+      </div>
+
+      <div className="mt-3">
         <ScoreEvidence evidence={data.score_evidence || {}} />
       </div>
 
