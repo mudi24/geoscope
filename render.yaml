@@ -59,7 +59,7 @@ services:
     region: singapore
     plan: free
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci && rm -rf .next && npm run build
     startCommand: npm run start -- -p $PORT
     envVars:
       - key: NODE_VERSION
