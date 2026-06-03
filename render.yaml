@@ -16,6 +16,8 @@ services:
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       # ── AI 配置（在 Render Dashboard 中覆盖，不要写在此文件） ──
       - key: DEEPSEEK_API_KEY
         sync: false            # sync:false = 部署时从 Dashboard 读取，不写入 git
