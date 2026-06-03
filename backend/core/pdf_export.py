@@ -20,23 +20,29 @@ from reportlab.platypus import (
 # Font registration
 # ---------------------------------------------------------------------------
 
-# Project-bundled font (downloaded by build.sh into backend/fonts/)
+# Project-bundled font dir (downloaded by build.sh into backend/fonts/)
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_BUNDLED_FONT = os.path.join(_BACKEND_DIR, "fonts", "NotoSansCJK-Regular.ttc")
+_FONT_DIR = os.path.join(_BACKEND_DIR, "fonts")
 
 _FONT_CANDIDATES = [
-    # 1. Project-bundled font — always present after build.sh runs
-    _BUNDLED_FONT,
-    # 2. Common Linux system paths (Ubuntu/Debian variants)
-    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    # 1. Project fonts/ directory (build.sh download fallback)
+    os.path.join(_FONT_DIR, "NotoSansCJK-Regular.ttc"),
+    os.path.join(_FONT_DIR, "NotoSansSC-Regular.otf"),
+    os.path.join(_FONT_DIR, "NotoSansSC-Regular.ttf"),
+    # 2. apt fonts-noto-cjk (Render / Ubuntu / Debian)
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-    # 3. macOS system fonts (local dev)
+    # 3. apt fonts-wqy-zenhei (fallback, smaller package)
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc",
+    # 4. macOS system fonts (local dev)
     "/System/Library/Fonts/STHeiti Light.ttc",
     "/System/Library/Fonts/STHeiti Medium.ttc",
     "/System/Library/Fonts/Hiragino Sans GB.ttc",
 ]
 _FONT_NAME = "Helvetica"  # fallback (ASCII only)
+
 
 def _register_font() -> str:
     global _FONT_NAME
@@ -45,12 +51,20 @@ def _register_font() -> str:
     for path in _FONT_CANDIDATES:
         if not os.path.exists(path):
             continue
-        try:
-            pdfmetrics.registerFont(TTFont("CJK", path, subfontIndex=0))
-            _FONT_NAME = "CJK"
-            return _FONT_NAME
-        except Exception:
-            continue
+        # Try with subfontIndex=0 first (required for .ttc), then without
+        for kwargs in ({"subfontIndex": 0}, {}):
+            try:
+                pdfmetrics.registerFont(TTFont("CJK", path, **kwargs))
+                _FONT_NAME = "CJK"
+                print(f"[pdf_export] CJK font registered: {path}", flush=True)
+                return _FONT_NAME
+            except Exception:
+                continue
+    print(
+        f"[pdf_export] WARNING: No CJK font found. Searched:\n"
+        + "\n".join(f"  {p}" for p in _FONT_CANDIDATES),
+        flush=True,
+    )
     return _FONT_NAME
 
 
