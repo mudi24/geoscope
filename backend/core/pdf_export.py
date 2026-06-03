@@ -19,12 +19,22 @@ from reportlab.platypus import (
 # ---------------------------------------------------------------------------
 # Font registration
 # ---------------------------------------------------------------------------
+
+# Project-bundled font (downloaded by build.sh into backend/fonts/)
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_BUNDLED_FONT = os.path.join(_BACKEND_DIR, "fonts", "NotoSansCJK-Regular.ttc")
+
 _FONT_CANDIDATES = [
+    # 1. Project-bundled font — always present after build.sh runs
+    _BUNDLED_FONT,
+    # 2. Common Linux system paths (Ubuntu/Debian variants)
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    # 3. macOS system fonts (local dev)
     "/System/Library/Fonts/STHeiti Light.ttc",
     "/System/Library/Fonts/STHeiti Medium.ttc",
     "/System/Library/Fonts/Hiragino Sans GB.ttc",
-    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
 ]
 _FONT_NAME = "Helvetica"  # fallback (ASCII only)
 

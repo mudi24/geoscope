@@ -17,11 +17,24 @@ echo "[2/3] Installing Playwright Chromium..."
 # Render 的 Python 环境已预装大部分系统依赖，跳过 install-deps 避免权限问题
 PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1 python -m playwright install chromium
 
-# 3. 初始化 SQLite 数据库
+# 3. 下载 CJK 字体（供 PDF 导出使用，避免中文乱码）
+echo "[3/4] Downloading Noto Sans CJK font for PDF export..."
+FONT_DIR="$(pwd)/fonts"
+mkdir -p "$FONT_DIR"
+FONT_PATH="$FONT_DIR/NotoSansCJK-Regular.ttc"
+if [ ! -f "$FONT_PATH" ]; then
+  curl -fsSL \
+    "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTC/NotoSansCJK-Regular.ttc" \
+    -o "$FONT_PATH" \
+    || echo "WARNING: Font download failed, PDF may render Chinese as boxes"
+fi
+
+# 4. 初始化 SQLite 数据库
 #    注意：Render 免费实例磁盘为临时存储，重启后数据会丢失，这是已知取舍
-echo "[3/3] Initializing SQLite database..."
+echo "[4/4] Initializing SQLite database..."
 python3 init_db.py
 
 echo "──────────────────────────────────────"
 echo "  Build complete ✓"
 echo "──────────────────────────────────────"
+
