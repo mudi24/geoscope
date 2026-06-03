@@ -39,6 +39,9 @@ services:
         value: "1"
       - key: GEOSCOPE_ALLOW_PRIVATE_NETWORKS
         value: "false"
+      # ── Playwright：跳过系统依赖检查（Render 构建环境权限限制） ──
+      - key: PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS
+        value: "1"
       # ── 心跳：Render 不会休眠付费套餐，免费套餐 15min 无流量会休眠 ──
       - key: GEOSCOPE_HEARTBEAT_SECONDS
         value: "240"
