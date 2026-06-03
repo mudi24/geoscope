@@ -1,3 +1,13 @@
+'use client'
+
+import { useState } from 'react'
+
+function scoreColor(score: number) {
+  if (score >= 80) return { text: 'text-emerald-700', bg: 'bg-emerald-500', ring: 'ring-emerald-200', badge: 'bg-emerald-50 text-emerald-700' }
+  if (score >= 60) return { text: 'text-amber-700', bg: 'bg-amber-400', ring: 'ring-amber-200', badge: 'bg-amber-50 text-amber-700' }
+  return { text: 'text-red-700', bg: 'bg-red-500', ring: 'ring-red-200', badge: 'bg-red-50 text-red-700' }
+}
+
 export function ScoreCard({
   title,
   score,
@@ -13,55 +23,92 @@ export function ScoreCard({
   cons?: string[]
   suggestions?: string[]
 }) {
-  const color =
-    score >= 80 ? 'text-emerald-700' : score >= 60 ? 'text-amber-700' : 'text-red-700'
+  const [open, setOpen] = useState(false)
+  const c = scoreColor(score)
   const hasDetails =
     (pros && pros.length > 0) || (cons && cons.length > 0) || (suggestions && suggestions.length > 0)
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-        <div className={`text-xl font-bold ${color}`}>{score}</div>
+    <div className={`rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow ${open ? 'shadow-md' : ''}`}>
+      <div
+        className={`flex cursor-pointer items-start gap-4 p-4 ${hasDetails ? 'hover:bg-slate-50/60' : ''}`}
+        onClick={() => hasDetails && setOpen((v) => !v)}
+        role={hasDetails ? 'button' : undefined}
+        aria-expanded={hasDetails ? open : undefined}
+      >
+        {/* 分数圆环 */}
+        <div className={`flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-full ring-2 ${c.ring}`}>
+          <span className={`text-lg font-extrabold leading-none ${c.text}`}>{score}</span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+            {hasDetails && (
+              <span className="text-xs text-slate-400">{open ? '▲ 收起' : '▼ 展开'}</span>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">{desc}</p>
+          {/* 进度条 */}
+          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100">
+            <div
+              className={`h-1.5 rounded-full ${c.bg} transition-all duration-500`}
+              style={{ width: `${score}%` }}
+            />
+          </div>
+        </div>
       </div>
-      <p className="mt-2 text-sm text-slate-600">{desc}</p>
-      {hasDetails ? (
-        <details className="mt-3">
-          <summary className="cursor-pointer select-none text-xs font-medium text-slate-700 hover:text-slate-900">
-            查看优缺点与建议
-          </summary>
-          <div className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+
+      {/* 展开详情 */}
+      {open && hasDetails && (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <div className="text-xs font-semibold text-slate-900">优点</div>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-700">
-                {(pros || []).slice(0, 4).map((p, i) => (
-                  <li key={i}>{p}</li>
-                ))}
-                {(pros || []).length === 0 ? <li className="text-slate-400">—</li> : null}
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <span>✅</span> 优点
+              </div>
+              <ul className="mt-1.5 space-y-1">
+                {(pros || []).length > 0
+                  ? (pros || []).slice(0, 4).map((p, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
+                        <span className="mt-0.5 text-emerald-400">•</span> {p}
+                      </li>
+                    ))
+                  : <li className="text-xs text-slate-400">暂无</li>}
               </ul>
             </div>
             <div>
-              <div className="text-xs font-semibold text-slate-900">缺点</div>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-700">
-                {(cons || []).slice(0, 4).map((c, i) => (
-                  <li key={i}>{c}</li>
-                ))}
-                {(cons || []).length === 0 ? <li className="text-slate-400">—</li> : null}
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-red-600">
+                <span>❌</span> 缺点
+              </div>
+              <ul className="mt-1.5 space-y-1">
+                {(cons || []).length > 0
+                  ? (cons || []).slice(0, 4).map((c, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-slate-700">
+                        <span className="mt-0.5 text-red-400">•</span> {c}
+                      </li>
+                    ))
+                  : <li className="text-xs text-slate-400">暂无</li>}
               </ul>
             </div>
           </div>
-          {suggestions && suggestions.length > 0 ? (
-            <div className="mt-3">
-              <div className="text-xs font-semibold text-slate-900">建议</div>
-              <ul className="mt-1 list-disc space-y-1 pl-5 text-slate-700">
+
+          {suggestions && suggestions.length > 0 && (
+            <div className="mt-3 rounded-lg bg-indigo-50 p-3">
+              <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-indigo-700">
+                <span>💡</span> 改进建议
+              </div>
+              <ul className="space-y-1">
                 {suggestions.slice(0, 4).map((s, i) => (
-                  <li key={i}>{s}</li>
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-indigo-800">
+                    <span className="mt-0.5 font-bold">{i + 1}.</span> {s}
+                  </li>
                 ))}
               </ul>
             </div>
-          ) : null}
-        </details>
-      ) : null}
+          )}
+        </div>
+      )}
     </div>
   )
 }
