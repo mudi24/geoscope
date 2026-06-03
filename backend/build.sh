@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# backend/build.sh
+# backend/build.sh - v2 (skip install-deps)
 # Render 构建脚本：安装 Python 依赖 + Playwright Chromium
 set -euo pipefail
 
