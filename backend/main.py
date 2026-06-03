@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from dotenv import load_dotenv
 
 from core.ai_analyzer import analyze_with_cache, fingerprint_content
@@ -19,6 +20,7 @@ from core.db import connect, get_db_path, init_db
 from core.fetcher import fetch_url
 from core.geo_scorer import build_insights, score as score_geo
 from core.heartbeat import start_heartbeat
+from core.pdf_export import build_pdf
 from core.rate_limit import RateLimiter
 from core.url_safety import UrlSafetyError, validate_public_url
 from models.schemas import AnalysisResponse, HistoryItem
@@ -408,6 +410,100 @@ async def get_analysis(analysis_id: int, request: Request) -> AnalysisResponse:
         fetch_method=row["fetch_method"] or ("pending" if (row["status"] or "") != "done" else "httpx"),
         created_at=created_at,
     )
+@app.get("/api/export/pdf/{analysis_id}")
+async def export_pdf(analysis_id: int, request: Request) -> Response:
+    """Generate and return a PDF report for the given analysis."""
+    client_id = _get_client_id(request)
+    conn = await connect(app.state.db_path)
+    try:
+        cur = await conn.execute(
+            "SELECT * FROM analyses WHERE id = ? AND client_id = ?",
+            (analysis_id, client_id),
+        )
+        row = await cur.fetchone()
+    finally:
+        await conn.close()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="analysis not found")
+
+    if (row["status"] or "") != "done":
+        raise HTTPException(status_code=400, detail="analysis not finished yet")
+
+    # Re-assemble the same data structure as get_analysis
+    created_at = _parse_db_datetime(row["created_at"])
+    gaps = json.loads(row["ai_gaps"] or "[]")
+    suggestions = json.loads(row["ai_suggestions"] or "[]")
+    score_evidence = None
+    try:
+        if row["score_evidence"]:
+            score_evidence = json.loads(row["score_evidence"])
+    except Exception:
+        score_evidence = None
+
+    score_insights = None
+    if score_evidence is not None:
+        try:
+            from core.geo_scorer import GeoScoreResult
+            geo2 = GeoScoreResult(
+                semantic_clarity=row["semantic_clarity"] or 0,
+                entity_completeness=row["entity_completeness"] or 0,
+                citation_credibility=row["citation_credibility"] or 0,
+                qa_friendly=row["qa_friendly"] or 0,
+                tech_markup=row["tech_markup"] or 0,
+                total_score=row["total_score"] or 0,
+                evidence=score_evidence or {},
+            )
+            raw_insights = build_insights(geo2)
+            # Convert to plain dicts for pdf_export
+            score_insights = {
+                k: {
+                    "score": v.score,
+                    "pros": v.pros,
+                    "cons": v.cons,
+                    "suggestions": v.suggestions,
+                }
+                for k, v in (raw_insights or {}).items()
+            }
+        except Exception:
+            score_insights = None
+
+    data = {
+        "id": row["id"],
+        "url": row["url"],
+        "title": row["title"],
+        "domain": row["domain"],
+        "fetch_method": row["fetch_method"] or "httpx",
+        "created_at": created_at,
+        "scores": {
+            "semantic_clarity": row["semantic_clarity"] or 0,
+            "entity_completeness": row["entity_completeness"] or 0,
+            "citation_credibility": row["citation_credibility"] or 0,
+            "qa_friendly": row["qa_friendly"] or 0,
+            "tech_markup": row["tech_markup"] or 0,
+            "total_score": row["total_score"] or 0,
+        },
+        "score_evidence": score_evidence,
+        "score_insights": score_insights,
+        "ai_result": {
+            "summary": row["ai_summary"] or "",
+            "gaps": gaps,
+            "suggestions": suggestions,
+        },
+    }
+
+    pdf_bytes = build_pdf(data)
+    domain_safe = (row["domain"] or "report").replace("/", "_")
+    date_str = created_at.strftime("%Y-%m-%d")
+    filename = f"geoscope_{domain_safe}_{date_str}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 import os
 import time
 import uuid

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { AIReport } from '@/components/AIReport'
+import { ExportPDFButton } from '@/components/ExportPDFButton'
 import { ScoreCard } from '@/components/ScoreCard'
 import { ScoreEvidence } from '@/components/ScoreEvidence'
 import { ScoreRadar } from '@/components/ScoreRadar'
@@ -109,110 +110,113 @@ export default function AnalyzePage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-4xl px-6 py-12">
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">
-              {data.title || '（无标题）'}
-            </h1>
-            <p className="mt-1 text-sm text-slate-600">
-              {data.domain || ''} · {new Date(data.created_at).toLocaleString()} · 抓取方式{' '}
-              {data.fetch_method}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-              ID {data.id}
+      <div>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900">
+                {data.title || '（无标题）'}
+              </h1>
+              <p className="mt-1 text-sm text-slate-600">
+                {data.domain || ''} · {new Date(data.created_at).toLocaleString()} · 抓取方式{' '}
+                {data.fetch_method}
+              </p>
             </div>
-            <div className="text-4xl font-bold text-slate-900">{data.scores.total_score}</div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                ID {data.id}
+              </div>
+              <div className="text-4xl font-bold text-slate-900">{data.scores.total_score}</div>
+            </div>
+          </div>
+          <div className="mt-3 break-all text-sm text-slate-600">
+            <span className="text-slate-500">URL：</span>
+            <a
+              className="text-indigo-600 hover:text-indigo-700"
+              href={data.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {data.url}
+            </a>
           </div>
         </div>
-        <div className="mt-3 break-all text-sm text-slate-600">
-          <span className="text-slate-500">URL：</span>
-          <a
-            className="text-indigo-600 hover:text-indigo-700"
-            href={data.url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {data.url}
-          </a>
+
+        <div className="mt-8 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">五维评分</h2>
+          <div className="text-xs text-slate-500">点击卡片可展开优缺点与建议</div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <ScoreRadar data={radarData} totalScore={data.scores.total_score} />
+          <div className="grid grid-cols-1 gap-4">
+            <ScoreCard
+              title="语义清晰度"
+              score={data.scores.semantic_clarity}
+              desc="标题层级/段落长度/小标题密度等结构信号"
+              pros={insight.semantic?.pros}
+              cons={insight.semantic?.cons}
+              suggestions={insight.semantic?.suggestions}
+            />
+            <ScoreCard
+              title="实体完整性"
+              score={data.scores.entity_completeness}
+              desc="关键术语是否给出上下文解释、缩写是否展开"
+              pros={insight.entity?.pros}
+              cons={insight.entity?.cons}
+              suggestions={insight.entity?.suggestions}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <ScoreCard
+            title="引用可信度"
+            score={data.scores.citation_credibility}
+            desc="作者/日期/外链等可追溯性信号"
+            pros={insight.citation?.pros}
+            cons={insight.citation?.cons}
+            suggestions={insight.citation?.suggestions}
+          />
+          <ScoreCard
+            title="问答友好度"
+            score={data.scores.qa_friendly}
+            desc="是否具备 FAQ/Q&A、结论前置、直接答案句式"
+            pros={insight.qa?.pros}
+            cons={insight.qa?.cons}
+            suggestions={insight.qa?.suggestions}
+          />
+          <ScoreCard
+            title="技术标记"
+            score={data.scores.tech_markup}
+            desc="Schema.org/OG/Canonical 等结构化标记"
+            pros={insight.tech?.pros}
+            cons={insight.tech?.cons}
+            suggestions={insight.tech?.suggestions}
+          />
+        </div>
+
+        <div className="mt-8 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">AI 洞察</h2>
+          <div className="text-xs text-slate-500">摘要 / 缺口 / 优化建议</div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <AIReport summary={data.ai_result.summary} gaps={data.ai_result.gaps} />
+          <SuggestionList items={data.ai_result.suggestions} />
+        </div>
+
+        <div className="mt-8 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">评分证据</h2>
+          <div className="text-xs text-slate-500">用于解释"为何得分如此"</div>
+        </div>
+
+        <div className="mt-3">
+          <ScoreEvidence evidence={data.score_evidence || {}} />
         </div>
       </div>
 
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">五维评分</h2>
-        <div className="text-xs text-slate-500">点击卡片可展开优缺点与建议</div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <ScoreRadar data={radarData} totalScore={data.scores.total_score} />
-        <div className="grid grid-cols-1 gap-4">
-          <ScoreCard
-            title="语义清晰度"
-            score={data.scores.semantic_clarity}
-            desc="标题层级/段落长度/小标题密度等结构信号"
-            pros={insight.semantic?.pros}
-            cons={insight.semantic?.cons}
-            suggestions={insight.semantic?.suggestions}
-          />
-          <ScoreCard
-            title="实体完整性"
-            score={data.scores.entity_completeness}
-            desc="关键术语是否给出上下文解释、缩写是否展开"
-            pros={insight.entity?.pros}
-            cons={insight.entity?.cons}
-            suggestions={insight.entity?.suggestions}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <ScoreCard
-          title="引用可信度"
-          score={data.scores.citation_credibility}
-          desc="作者/日期/外链等可追溯性信号"
-          pros={insight.citation?.pros}
-          cons={insight.citation?.cons}
-          suggestions={insight.citation?.suggestions}
-        />
-        <ScoreCard
-          title="问答友好度"
-          score={data.scores.qa_friendly}
-          desc="是否具备 FAQ/Q&A、结论前置、直接答案句式"
-          pros={insight.qa?.pros}
-          cons={insight.qa?.cons}
-          suggestions={insight.qa?.suggestions}
-        />
-        <ScoreCard
-          title="技术标记"
-          score={data.scores.tech_markup}
-          desc="Schema.org/OG/Canonical 等结构化标记"
-          pros={insight.tech?.pros}
-          cons={insight.tech?.cons}
-          suggestions={insight.tech?.suggestions}
-        />
-      </div>
-
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">AI 洞察</h2>
-        <div className="text-xs text-slate-500">摘要 / 缺口 / 优化建议</div>
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <AIReport summary={data.ai_result.summary} gaps={data.ai_result.gaps} />
-        <SuggestionList items={data.ai_result.suggestions} />
-      </div>
-
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">评分证据</h2>
-        <div className="text-xs text-slate-500">用于解释“为何得分如此”</div>
-      </div>
-
-      <div className="mt-3">
-        <ScoreEvidence evidence={data.score_evidence || {}} />
-      </div>
-
+      {/* 操作按钮区 */}
       <div className="mt-6 flex flex-wrap gap-2">
         <Link
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
@@ -226,6 +230,7 @@ export default function AnalyzePage() {
         >
           查看历史
         </Link>
+        <ExportPDFButton analysisId={data.id} domain={data.domain} />
       </div>
     </main>
   )
