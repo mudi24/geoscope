@@ -64,8 +64,6 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "18"
-      - key: NODE_ENV
-        value: production
       # 部署后将后端 URL 填入 Dashboard，格式: https://geoscope-backend.onrender.com
       - key: NEXT_PUBLIC_API_URL
         sync: false
