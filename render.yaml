@@ -60,6 +60,8 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: npm run start -- -p $PORT
     envVars:
+      - key: NODE_VERSION
+        value: "18"
       - key: NODE_ENV
         value: production
       # 部署后将后端 URL 填入 Dashboard，格式: https://geoscope-backend.onrender.com
